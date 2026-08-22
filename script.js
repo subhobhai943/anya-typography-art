@@ -1,8 +1,10 @@
 (() => {
   'use strict';
 
+  const experience = document.querySelector('.experience');
   const canvas = document.getElementById('portraitCanvas');
   const ctx = canvas.getContext('2d', { alpha: false });
+  const sourceImage = document.getElementById('sourceImage');
   const sampleCanvas = document.createElement('canvas');
   const sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
   const loader = document.getElementById('loader');
@@ -14,56 +16,22 @@
   const speedControl = document.getElementById('speedControl');
   const densityControl = document.getElementById('densityControl');
   const glowControl = document.getElementById('glowControl');
-  const imageSource = './assets/anya.jpg';
 
-  const state = {
-    image: null,
-    pixels: null,
-    sampleWidth: 0,
-    sampleHeight: 0,
-    cssWidth: 0,
-    cssHeight: 0,
-    dpr: 1,
-    cell: 10,
-    offset: 0,
-    speed: 0.35,
-    glow: 0.45,
-    pointerX: 0.5,
-    pointerY: 0.5,
-    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    lastTime: performance.now(),
-    resizeTimer: 0
-  };
+  const state = { pixels: null, sampleWidth: 0, sampleHeight: 0, cssWidth: 0, cssHeight: 0, dpr: 1, cell: 12, offset: 0, speed: .35, glow: .45, pointerX: .5, pointerY: .5, reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches, lastTime: performance.now(), resizeTimer: 0 };
 
-  function showError(reason) {
-    console.error('ANYA portrait failed to initialize:', reason);
-    errorDetail.textContent = `Could not load ${imageSource}. Confirm it opens directly in your browser.`;
+  function showError(error) {
+    console.error('ANYA portrait error:', error);
+    errorDetail.textContent = error && error.message ? error.message : 'The artwork could not process the source image.';
     loader.classList.add('is-hidden');
     errorMessage.hidden = false;
-    resizeCanvas();
-    drawTypography();
-  }
-
-  function loadImage() {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
-        if (image.naturalWidth > 0 && image.naturalHeight > 0) resolve(image);
-        else reject(new Error('The source image has no readable dimensions.'));
-      };
-      image.onerror = () => reject(new Error(`Unable to load ${imageSource}`));
-      image.src = imageSource;
-    });
   }
 
   function processImage() {
-    const ratio = Math.max(state.sampleWidth / state.image.naturalWidth, state.sampleHeight / state.image.naturalHeight);
-    const width = state.image.naturalWidth * ratio;
-    const height = state.image.naturalHeight * ratio;
-    const x = (state.sampleWidth - width) / 2;
-    const y = (state.sampleHeight - height) / 2;
+    const ratio = Math.max(state.sampleWidth / sourceImage.naturalWidth, state.sampleHeight / sourceImage.naturalHeight);
+    const drawWidth = sourceImage.naturalWidth * ratio;
+    const drawHeight = sourceImage.naturalHeight * ratio;
     sampleCtx.clearRect(0, 0, state.sampleWidth, state.sampleHeight);
-    sampleCtx.drawImage(state.image, x, y, width, height);
+    sampleCtx.drawImage(sourceImage, (state.sampleWidth - drawWidth) / 2, (state.sampleHeight - drawHeight) / 2, drawWidth, drawHeight);
     state.pixels = sampleCtx.getImageData(0, 0, state.sampleWidth, state.sampleHeight).data;
   }
 
@@ -75,44 +43,39 @@
     canvas.height = Math.round(state.cssHeight * state.dpr);
     ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
     ctx.textBaseline = 'middle';
-
     state.cell = Number(densityControl.value);
     state.sampleWidth = Math.ceil(state.cssWidth / state.cell);
     state.sampleHeight = Math.ceil(state.cssHeight / state.cell);
     sampleCanvas.width = state.sampleWidth;
     sampleCanvas.height = state.sampleHeight;
-    if (state.image) processImage();
+    if (sourceImage.complete && sourceImage.naturalWidth) processImage();
   }
 
   function drawTypography() {
-    const { cssWidth: width, cssHeight: height, cell, sampleWidth, sampleHeight, pixels } = state;
     ctx.fillStyle = '#070509';
-    ctx.fillRect(0, 0, width, height);
-    if (!pixels) return;
+    ctx.fillRect(0, 0, state.cssWidth, state.cssHeight);
+    if (!state.pixels) return;
+    ctx.font = `700 ${Math.max(7, state.cell * .88)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    const px = state.pointerX * state.sampleWidth;
+    const py = state.pointerY * state.sampleHeight;
 
-    const fontSize = Math.max(7, cell * 0.88);
-    ctx.font = `700 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-    const pointerGridX = state.pointerX * sampleWidth;
-    const pointerGridY = state.pointerY * sampleHeight;
-
-    for (let gy = 0; gy < sampleHeight; gy++) {
-      const screenY = gy * cell + cell * 0.52;
-      for (let gx = 0; gx < sampleWidth; gx++) {
-        const pixelIndex = (gy * sampleWidth + gx) * 4;
-        const r = pixels[pixelIndex];
-        const g = pixels[pixelIndex + 1];
-        const b = pixels[pixelIndex + 2];
-        const alpha = pixels[pixelIndex + 3] / 255;
-        const brightness = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
-        if (alpha < 0.08 || brightness < 0.055) continue;
-
-        const cursorLift = Math.max(0, 1 - Math.hypot(gx - pointerGridX, gy - pointerGridY) / 20);
-        const opacity = Math.min(0.96, (0.17 + brightness * 0.76) * alpha + cursorLift * 0.19);
-        const x = ((gx * cell + state.offset * (0.6 + brightness * 0.5)) % (width + cell * 4)) - cell * 3;
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-        ctx.shadowColor = `rgba(${r}, ${g}, ${b}, ${state.glow * (0.13 + brightness * 0.45)})`;
-        ctx.shadowBlur = state.glow * (3 + brightness * 10 + cursorLift * 12);
-        ctx.fillText('ANYA', x, screenY);
+    for (let gy = 0; gy < state.sampleHeight; gy++) {
+      const y = gy * state.cell + state.cell * .52;
+      for (let gx = 0; gx < state.sampleWidth; gx++) {
+        const i = (gy * state.sampleWidth + gx) * 4;
+        const r = state.pixels[i];
+        const g = state.pixels[i + 1];
+        const b = state.pixels[i + 2];
+        const alpha = state.pixels[i + 3] / 255;
+        const brightness = (r * .2126 + g * .7152 + b * .0722) / 255;
+        if (alpha < .08 || brightness < .055) continue;
+        const boost = Math.max(0, 1 - Math.hypot(gx - px, gy - py) / 20);
+        const opacity = Math.min(.96, (.17 + brightness * .76) * alpha + boost * .19);
+        const x = ((gx * state.cell + state.offset * (.6 + brightness * .5)) % (state.cssWidth + state.cell * 4)) - state.cell * 3;
+        ctx.fillStyle = `rgba(${r},${g},${b},${opacity})`;
+        ctx.shadowColor = `rgba(${r},${g},${b},${state.glow * (.13 + brightness * .45)})`;
+        ctx.shadowBlur = state.glow * (3 + brightness * 10 + boost * 12);
+        ctx.fillText('ANYA', x, y);
       }
     }
     ctx.shadowBlur = 0;
@@ -121,45 +84,30 @@
   function animate(now) {
     const delta = Math.min(48, now - state.lastTime);
     state.lastTime = now;
-    if (!state.reducedMotion) state.offset -= delta * state.speed * 0.025;
-    const wrap = state.cssWidth + state.cell * 4;
-    if (Math.abs(state.offset) > wrap) state.offset += wrap;
+    if (!state.reducedMotion) state.offset -= delta * state.speed * .025;
+    if (Math.abs(state.offset) > state.cssWidth + state.cell * 4) state.offset = 0;
     drawTypography();
     requestAnimationFrame(animate);
   }
 
-  function handlePointerMove(event) {
-    state.pointerX = event.clientX / Math.max(1, state.cssWidth);
-    state.pointerY = event.clientY / Math.max(1, state.cssHeight);
+  function start() {
+    try {
+      resizeCanvas();
+      if (!state.pixels) throw new Error('The loaded image has no readable pixel data.');
+      experience.classList.add('is-rendered');
+      loader.classList.add('is-hidden');
+      requestAnimationFrame(animate);
+    } catch (error) { showError(error); }
   }
 
-  function handleResize() {
-    window.clearTimeout(state.resizeTimer);
-    state.resizeTimer = window.setTimeout(resizeCanvas, 130);
-  }
+  sourceImage.addEventListener('load', start, { once: true });
+  sourceImage.addEventListener('error', () => showError(new Error('Could not load ./assets/anya.jpg.')), { once: true });
+  if (sourceImage.complete) { if (sourceImage.naturalWidth) start(); else showError(new Error('Could not load ./assets/anya.jpg.')); }
 
-  settingsToggle.addEventListener('click', () => {
-    const willOpen = settingsPanel.hidden;
-    settingsPanel.hidden = !willOpen;
-    settingsToggle.setAttribute('aria-expanded', String(willOpen));
-  });
+  settingsToggle.addEventListener('click', () => { const open = settingsPanel.hidden; settingsPanel.hidden = !open; settingsToggle.setAttribute('aria-expanded', String(open)); });
   speedControl.addEventListener('input', () => { state.speed = Number(speedControl.value); });
   glowControl.addEventListener('input', () => { state.glow = Number(glowControl.value); });
   densityControl.addEventListener('input', resizeCanvas);
-  window.addEventListener('pointermove', handlePointerMove, { passive: true });
-  window.addEventListener('resize', handleResize, { passive: true });
-
-  async function init() {
-    try {
-      loadingText.textContent = 'LOADING ANYA...';
-      state.image = await loadImage();
-      resizeCanvas();
-      loader.classList.add('is-hidden');
-      requestAnimationFrame(animate);
-    } catch (error) {
-      showError(error);
-    }
-  }
-
-  init();
+  window.addEventListener('pointermove', event => { state.pointerX = event.clientX / Math.max(1, state.cssWidth); state.pointerY = event.clientY / Math.max(1, state.cssHeight); }, { passive: true });
+  window.addEventListener('resize', () => { clearTimeout(state.resizeTimer); state.resizeTimer = setTimeout(resizeCanvas, 130); }, { passive: true });
 })();
