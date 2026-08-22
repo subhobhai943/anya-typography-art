@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#070509" />
   <meta name="description" content="An animated, canvas-based typography portrait built from repeated ANYA text." />
   <title>ANYA — Digital Typography</title>
-  <link rel="stylesheet" href="./style.css?v=20260822-3" />
-  <script src="./script.js?v=20260822-3" defer></script>
+  <link rel="stylesheet" href="./style.css?v=20260822-5" />
+  <script src="./script.js?v=20260822-5" defer></script>
 </head>
 <body>
   <main class="experience" aria-labelledby="art-title">
@@ -22,10 +22,7 @@
       <p class="series">SPY × FAMILY</p>
     </section>
 
-    <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsPanel">
-      Tune
-    </button>
-
+    <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsPanel">Tune</button>
     <aside class="settings" id="settingsPanel" aria-label="Artwork settings" hidden>
       <label>Flow <input id="speedControl" type="range" min="0" max="1.4" step="0.05" value="0.35" /></label>
       <label>Density <input id="densityControl" type="range" min="6" max="18" step="1" value="10" /></label>
@@ -39,7 +36,7 @@
 
     <section class="error" id="errorMessage" role="alert" hidden>
       <p>PORTRAIT SOURCE UNAVAILABLE</p>
-      <span>Unable to load <code>assets/anya.png</code>. Refresh after GitHub Pages finishes deploying.</span>
+      <span id="errorDetail">The portrait could not be initialized.</span>
     </section>
   </main>
 </body>

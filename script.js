@@ -8,12 +8,13 @@
   const loader = document.getElementById('loader');
   const loadingText = document.getElementById('loadingText');
   const errorMessage = document.getElementById('errorMessage');
+  const errorDetail = document.getElementById('errorDetail');
   const settingsToggle = document.getElementById('settingsToggle');
   const settingsPanel = document.getElementById('settingsPanel');
   const speedControl = document.getElementById('speedControl');
   const densityControl = document.getElementById('densityControl');
   const glowControl = document.getElementById('glowControl');
-  const imageSource = new URL('assets/anya.jpg', window.location.href).href;
+  const imageSource = './assets/anya.jpg';
 
   const state = {
     image: null,
@@ -36,6 +37,7 @@
 
   function showError(reason) {
     console.error('ANYA portrait failed to initialize:', reason);
+    errorDetail.textContent = `Could not load ${imageSource}. Confirm it opens directly in your browser.`;
     loader.classList.add('is-hidden');
     errorMessage.hidden = false;
     resizeCanvas();
@@ -45,22 +47,17 @@
   function loadImage() {
     return new Promise((resolve, reject) => {
       const image = new Image();
-      image.decoding = 'sync';
       image.onload = () => {
-        if (!image.naturalWidth || !image.naturalHeight) {
-          reject(new Error('The source image has no readable dimensions.'));
-          return;
-        }
-        resolve(image);
+        if (image.naturalWidth > 0 && image.naturalHeight > 0) resolve(image);
+        else reject(new Error('The source image has no readable dimensions.'));
       };
       image.onerror = () => reject(new Error(`Unable to load ${imageSource}`));
       image.src = imageSource;
     });
   }
 
-  // Draw a proportionally cropped source image into a compact sampling canvas.
   function processImage() {
-    const ratio = Math.min(state.sampleWidth / state.image.naturalWidth, state.sampleHeight / state.image.naturalHeight);
+    const ratio = Math.max(state.sampleWidth / state.image.naturalWidth, state.sampleHeight / state.image.naturalHeight);
     const width = state.image.naturalWidth * ratio;
     const height = state.image.naturalHeight * ratio;
     const x = (state.sampleWidth - width) / 2;
@@ -95,7 +92,6 @@
 
     const fontSize = Math.max(7, cell * 0.88);
     ctx.font = `700 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-    const word = 'ANYA';
     const pointerGridX = state.pointerX * sampleWidth;
     const pointerGridY = state.pointerY * sampleHeight;
 
@@ -110,15 +106,13 @@
         const brightness = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
         if (alpha < 0.08 || brightness < 0.055) continue;
 
-        const dx = gx - pointerGridX;
-        const dy = gy - pointerGridY;
-        const cursorLift = Math.max(0, 1 - Math.hypot(dx, dy) / 20);
+        const cursorLift = Math.max(0, 1 - Math.hypot(gx - pointerGridX, gy - pointerGridY) / 20);
         const opacity = Math.min(0.96, (0.17 + brightness * 0.76) * alpha + cursorLift * 0.19);
         const x = ((gx * cell + state.offset * (0.6 + brightness * 0.5)) % (width + cell * 4)) - cell * 3;
         ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
         ctx.shadowColor = `rgba(${r}, ${g}, ${b}, ${state.glow * (0.13 + brightness * 0.45)})`;
         ctx.shadowBlur = state.glow * (3 + brightness * 10 + cursorLift * 12);
-        ctx.fillText(word, x, screenY);
+        ctx.fillText('ANYA', x, screenY);
       }
     }
     ctx.shadowBlur = 0;
