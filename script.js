@@ -13,6 +13,7 @@
   const speedControl = document.getElementById('speedControl');
   const densityControl = document.getElementById('densityControl');
   const glowControl = document.getElementById('glowControl');
+  const imageSource = new URL('assets/download.jpeg', window.location.href).href;
 
   const state = {
     image: null,
@@ -33,13 +34,20 @@
     resizeTimer: 0
   };
 
+  function showError() {
+    loader.classList.add('is-hidden');
+    errorMessage.hidden = false;
+    resizeCanvas();
+    drawTypography();
+  }
+
   function loadImage() {
     return new Promise((resolve, reject) => {
       const image = new Image();
       image.decoding = 'async';
       image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = './assets/download.jpeg';
+      image.onerror = () => reject(new Error(`Unable to load ${imageSource}`));
+      image.src = imageSource;
     });
   }
 
@@ -148,10 +156,7 @@
       loader.classList.add('is-hidden');
       requestAnimationFrame(animate);
     } catch {
-      loader.classList.add('is-hidden');
-      errorMessage.hidden = false;
-      resizeCanvas();
-      drawTypography();
+      showError();
     }
   }
 
