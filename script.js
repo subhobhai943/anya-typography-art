@@ -13,7 +13,7 @@
   const speedControl = document.getElementById('speedControl');
   const densityControl = document.getElementById('densityControl');
   const glowControl = document.getElementById('glowControl');
-  const imageSource = new URL('assets/anya.png', window.location.href).href;
+  const imageSource = new URL('assets/anya.jpg', window.location.href).href;
 
   const state = {
     image: null,
