@@ -39,7 +39,7 @@
       image.decoding = 'async';
       image.onload = () => resolve(image);
       image.onerror = reject;
-      image.src = './assets/anya.png';
+      image.src = './assets/download.jpeg';
     });
   }
 
