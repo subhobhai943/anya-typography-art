@@ -6,15 +6,12 @@
   <meta name="theme-color" content="#070509" />
   <meta name="description" content="An animated, canvas-based typography portrait built from repeated ANYA text." />
   <title>ANYA — Digital Typography</title>
-  <link rel="stylesheet" href="./style.css?v=20260822-7" />
-  <script src="./script.js?v=20260822-7" defer></script>
+  <link rel="stylesheet" href="./style.css?v=20260822-8" />
+  <script src="./script.js?v=20260822-8" defer></script>
 </head>
 <body>
   <main class="experience" aria-labelledby="art-title">
-    <img id="sourceImage" class="source-image" src="./assets/anya.jpg" alt="" aria-hidden="true" />
-    <canvas id="portraitCanvas" aria-label="Animated digital typography portrait built from the Anya source image.">
-      This artwork needs a browser with HTML5 Canvas support.
-    </canvas>
+    <canvas id="portraitCanvas" aria-label="Animated typography portrait of Anya."></canvas>
     <section class="hud" aria-label="Artwork information">
       <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> LIVE</p>
       <h1 id="art-title">ANYA</h1>
@@ -24,10 +21,15 @@
     <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsPanel">Tune</button>
     <aside class="settings" id="settingsPanel" aria-label="Artwork settings" hidden>
       <label>Flow <input id="speedControl" type="range" min="0" max="1.4" step="0.05" value="0.35" /></label>
-      <label>Density <input id="densityControl" type="range" min="10" max="24" step="1" value="16" /></label>
-      <label>Glow <input id="glowControl" type="range" min="0" max="1" step="0.05" value="0.45" /></label>
+      <label>Density <input id="densityControl" type="range" min="8" max="20" step="1" value="12" /></label>
+      <label>Glow <input id="glowControl" type="range" min="0" max="1" step="0.05" value="0.5" /></label>
     </aside>
     <section class="loader" id="loader" role="status" aria-live="polite"><p>INITIALIZING...</p><p id="loadingText">LOADING ANYA...</p></section>
+    <section class="error" id="errorMessage" role="alert" hidden>
+      <p>PORTRAIT SOURCE UNAVAILABLE</p>
+      <span id="errorDetail"></span>
+    </section>
   </main>
+  <img id="sourceImage" src="./assets/anya.jpg" alt="" aria-hidden="true" style="display:none" />
 </body>
 </html>
