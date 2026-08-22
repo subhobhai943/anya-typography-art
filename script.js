@@ -38,8 +38,21 @@
     sCtx.drawImage(image, (sw - iw) / 2, (sh - ih) / 2, iw, ih);
     try {
       pixels = sCtx.getImageData(0, 0, sw, sh).data;
-    } catch(e) {
-      fail('Canvas security error reading image pixels: ' + e.message);
+    } catch (e) {
+      // CORS taint — retry with a fresh Image() object and crossOrigin set first
+      const fresh = new Image();
+      fresh.crossOrigin = 'anonymous';
+      fresh.onload = () => {
+        sCtx.clearRect(0, 0, sw, sh);
+        sCtx.drawImage(fresh, (sw - iw) / 2, (sh - ih) / 2, iw, ih);
+        try {
+          pixels = sCtx.getImageData(0, 0, sw, sh).data;
+        } catch (e2) {
+          fail('Canvas security error: ' + e2.message);
+        }
+      };
+      fresh.onerror = () => fail('Could not reload image with CORS.');
+      fresh.src = './assets/anya.jpg?cors=1';
     }
   }
 
@@ -58,30 +71,22 @@
   }
 
   function draw() {
-    // solid dark background — critical for portrait silhouette contrast
     ctx.fillStyle = '#070509';
     ctx.fillRect(0, 0, vw, vh);
     if (!pixels) return;
-
     const fontSize = Math.max(7, cell * 0.9);
     ctx.font = `700 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
     const mx = px * sw, my = py * sh;
-
     for (let gy = 0; gy < sh; gy++) {
       const sy = gy * cell + cell * 0.5;
       for (let gx = 0; gx < sw; gx++) {
         const i = (gy * sw + gx) * 4;
         const r = pixels[i], g = pixels[i+1], b = pixels[i+2];
         const lum = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
-
-        // HIGH threshold — only draw where the image is clearly bright
-        // This is what creates the portrait silhouette against the dark bg
         if (lum < 0.22) continue;
-
-        const near   = Math.max(0, 1 - Math.hypot(gx - mx, gy - my) / 18);
-        const alpha  = Math.min(0.95, 0.25 + lum * 0.65 + near * 0.2);
-        const sx     = ((gx * cell + offset * (0.5 + lum * 0.6)) % (vw + cell * 4)) - cell * 3;
-
+        const near  = Math.max(0, 1 - Math.hypot(gx - mx, gy - my) / 18);
+        const alpha = Math.min(0.95, 0.25 + lum * 0.65 + near * 0.2);
+        const sx    = ((gx * cell + offset * (0.5 + lum * 0.6)) % (vw + cell * 4)) - cell * 3;
         ctx.fillStyle   = `rgba(${r},${g},${b},${alpha})`;
         ctx.shadowColor = `rgba(${r},${g},${b},${glow * (0.15 + lum * 0.5)})`;
         ctx.shadowBlur  = glow * (4 + lum * 12 + near * 14);
@@ -102,13 +107,12 @@
   function start() {
     if (!image.naturalWidth) { fail('Image loaded but has zero dimensions.'); return; }
     resize();
-    if (!pixels) return; // fail() already called inside sampleImage
     loader.classList.add('is-hidden');
     raf = requestAnimationFrame(frame);
   }
 
   image.addEventListener('load',  () => start(), { once: true });
-  image.addEventListener('error', () => fail('Could not load ./assets/anya.jpg — check the file exists in the repository.'), { once: true });
+  image.addEventListener('error', () => fail('Could not load ./assets/anya.jpg — confirm the file exists in the repository assets/ folder.'), { once: true });
   if (image.complete && image.naturalWidth) start();
 
   toggle.addEventListener('click', () => {
