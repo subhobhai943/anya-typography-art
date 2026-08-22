@@ -3,7 +3,6 @@
 
   const canvas  = document.getElementById('portraitCanvas');
   const ctx     = canvas.getContext('2d', { alpha: false });
-  const image   = document.getElementById('sourceImage');
   const sample  = document.createElement('canvas');
   const sCtx    = sample.getContext('2d', { willReadFrequently: true });
   const loader  = document.getElementById('loader');
@@ -15,12 +14,15 @@
   const densEl  = document.getElementById('densityControl');
   const glowEl  = document.getElementById('glowControl');
 
+  let image = null;           // loaded Image object (blob URL, always same-origin)
   let pixels = null, sw = 0, sh = 0;
   let vw = 0, vh = 0, cell = 12;
   let offset = 0, speed = 0.35, glow = 0.5;
   let px = 0.5, py = 0.5;
   let reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
   let last = performance.now(), raf = 0;
+
+  /* ---- error / loading helpers ---- */
 
   function fail(msg) {
     cancelAnimationFrame(raf);
@@ -29,32 +31,40 @@
     errBox.hidden = false;
   }
 
+  /* ---- fetch image as blob → guaranteed same-origin ---- */
+
+  const IMG_SRC = './assets/anya.jpg';
+
+  function loadImage() {
+    return fetch(IMG_SRC)
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(blob => {
+        return new Promise((resolve, reject) => {
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.onload  = () => { image = img; resolve(); };
+          img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Blob decode failed')); };
+          img.src = url;
+        });
+      });
+  }
+
+  /* ---- sample the portrait into a pixel grid ---- */
+
   function sampleImage() {
-    if (!image.naturalWidth) return;
+    if (!image || !image.naturalWidth) return;
     const ratio = Math.max(sw / image.naturalWidth, sh / image.naturalHeight);
     const iw = image.naturalWidth  * ratio;
     const ih = image.naturalHeight * ratio;
     sCtx.clearRect(0, 0, sw, sh);
     sCtx.drawImage(image, (sw - iw) / 2, (sh - ih) / 2, iw, ih);
-    try {
-      pixels = sCtx.getImageData(0, 0, sw, sh).data;
-    } catch (e) {
-      // CORS taint — retry with a fresh Image() object and crossOrigin set first
-      const fresh = new Image();
-      fresh.crossOrigin = 'anonymous';
-      fresh.onload = () => {
-        sCtx.clearRect(0, 0, sw, sh);
-        sCtx.drawImage(fresh, (sw - iw) / 2, (sh - ih) / 2, iw, ih);
-        try {
-          pixels = sCtx.getImageData(0, 0, sw, sh).data;
-        } catch (e2) {
-          fail('Canvas security error: ' + e2.message);
-        }
-      };
-      fresh.onerror = () => fail('Could not reload image with CORS.');
-      fresh.src = './assets/anya.jpg?cors=1';
-    }
+    pixels = sCtx.getImageData(0, 0, sw, sh).data;
   }
+
+  /* ---- resize handling ---- */
 
   function resize() {
     const dpr = Math.min(devicePixelRatio || 1, 2);
@@ -69,6 +79,8 @@
     sample.width = sw; sample.height = sh;
     sampleImage();
   }
+
+  /* ---- render loop ---- */
 
   function draw() {
     ctx.fillStyle = '#070509';
@@ -104,16 +116,20 @@
     raf = requestAnimationFrame(frame);
   }
 
+  /* ---- boot ---- */
+
   function start() {
-    if (!image.naturalWidth) { fail('Image loaded but has zero dimensions.'); return; }
+    if (!image || !image.naturalWidth) { fail('Image loaded but has zero dimensions.'); return; }
     resize();
     loader.classList.add('is-hidden');
     raf = requestAnimationFrame(frame);
   }
 
-  image.addEventListener('load',  () => start(), { once: true });
-  image.addEventListener('error', () => fail('Could not load ./assets/anya.jpg — confirm the file exists in the repository assets/ folder.'), { once: true });
-  if (image.complete && image.naturalWidth) start();
+  loadImage()
+    .then(() => start())
+    .catch(e => fail('Could not load portrait: ' + e.message));
+
+  /* ---- UI controls ---- */
 
   toggle.addEventListener('click', () => {
     const open = panel.hidden; panel.hidden = !open;
