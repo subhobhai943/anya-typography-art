@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#070509" />
+  <meta name="description" content="An animated, canvas-based typography portrait built from repeated ANYA text." />
+  <title>ANYA — Digital Typography</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script src="./script.js" defer></script>
+</head>
+<body>
+  <main class="experience" aria-labelledby="art-title">
+    <canvas id="portraitCanvas" aria-label="Animated digital typography portrait. Add assets/anya.png to render the portrait.">
+      This artwork needs a browser with HTML5 Canvas support.
+    </canvas>
+
+    <section class="hud" aria-label="Artwork information">
+      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> LIVE</p>
+      <h1 id="art-title">ANYA</h1>
+      <p class="subtitle">DIGITAL TYPOGRAPHY</p>
+      <p class="series">SPY × FAMILY</p>
+    </section>
+
+    <button class="settings-toggle" id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsPanel">
+      Tune
+    </button>
+
+    <aside class="settings" id="settingsPanel" aria-label="Artwork settings" hidden>
+      <label>Flow <input id="speedControl" type="range" min="0" max="1.4" step="0.05" value="0.35" /></label>
+      <label>Density <input id="densityControl" type="range" min="6" max="18" step="1" value="10" /></label>
+      <label>Glow <input id="glowControl" type="range" min="0" max="1" step="0.05" value="0.45" /></label>
+    </aside>
+
+    <section class="loader" id="loader" role="status" aria-live="polite">
+      <p>INITIALIZING...</p>
+      <p id="loadingText">LOADING ANYA...</p>
+    </section>
+
+    <section class="error" id="errorMessage" role="alert" hidden>
+      <p>PORTRAIT SOURCE UNAVAILABLE</p>
+      <span>Add an image at <code>assets/anya.png</code>, then reload.</span>
+    </section>
+  </main>
+</body>
+</html>
